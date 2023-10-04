@@ -9,6 +9,10 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  query,
+  where,
+  limit,
+  orderBy,
 } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 
@@ -18,11 +22,13 @@ import { Observable } from 'rxjs';
 export class NoteListService {
   trashNotes: Note[] = [];
   normalNotes: Note[] = [];
+  normalMarkedNotes: Note[] = [];
 
   //items$;
   //items;
   unsubNotes;
   unsubTrash;
+  unsubMarkedNotes;
 
   firestore: Firestore = inject(Firestore);
 
@@ -30,6 +36,7 @@ export class NoteListService {
     //onSnapshot funktioniert ähnlich wie collectiondata, lässt sich aber schneller einfügen und ermöglicht
     //detailliertere Datenreturns, z.B. Ids
     this.unsubNotes = this.subNotesList();
+    this.unsubMarkedNotes = this.subMarkedNotesList();
     this.unsubTrash = this.subTrashList();
 
     //items$ ist ein observable: es reagiert auf veränderte Daten in der Datenbank
@@ -77,9 +84,9 @@ export class NoteListService {
 
   //Funktion erhält hinzuzufügendes item --> addDoc fügt es durch collectionReference hinzu
   async pushNote(item: Note, colId: "notes" | "trash"){
-    await addDoc(this.getNoteRef(), item)
+    await addDoc((colId=="notes"?this.getNoteRef() : this.getTrashRef()), item)
       .catch((err) => {
-        console.log(colId)
+        console.log("Error:" + err);
         console.error(err);
       })
       .then((docRef) => {
@@ -88,10 +95,21 @@ export class NoteListService {
   }
 
   subNotesList() {
-    return onSnapshot(this.getNoteRef(), (list) => {
+    const q = query(this.getNoteRef(),limit(100));
+    return onSnapshot(q, (list) => {
       this.normalNotes = [];
       list.forEach((element) => {
         this.normalNotes.push(this.setNoteObject(element.data(), element.id));
+      });
+    });
+  }
+
+  subMarkedNotesList() {
+    const q = query(this.getNoteRef(), where("marked","==",true),limit(100));
+    return onSnapshot(q, (list) => {
+      this.normalMarkedNotes = [];
+      list.forEach((element) => {
+        this.normalMarkedNotes.push(this.setNoteObject(element.data(), element.id));
       });
     });
   }
@@ -119,6 +137,7 @@ export class NoteListService {
     //this.items.unsubscribe();
     this.unsubNotes();
     this.unsubTrash();
+    this.unsubMarkedNotes();
   }
 
   //const itemCollection = collection(this.firestore, 'items');

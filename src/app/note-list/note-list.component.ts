@@ -16,7 +16,17 @@ export class NoteListComponent {
   }
 
   getList(): Note[]{
-    return this.noteService.normalNotes;
+    if (this.status=="notes") {
+      if (this.favFilter=="all") {
+        return this.noteService.normalNotes;
+      }
+      else{
+        return this.noteService.normalMarkedNotes;
+      }
+    }
+    else{
+      return this.noteService.trashNotes;
+    }
   }
 
   changeFavFilter(filter:"all" | "fav"){
